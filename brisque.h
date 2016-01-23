@@ -10,6 +10,7 @@
 #include <highgui.h>
 #include <vector>
 #include <string.h>
+#include "bessel.h"
 using namespace std;
 #define M_PI 3.14159265358979323846
 
@@ -36,7 +37,7 @@ template<class T> class Image
   {
    imgp=0;
   }
-  void operator=(IplImage* img) 
+  void operator=(IplImage* img)
   {
     imgp=img;
   }

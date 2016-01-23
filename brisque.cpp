@@ -1,6 +1,15 @@
 #include "brisque.h"
+//extern "C"
+//{
+#include "bessel.h"
+#include <numeric>
+//}
+//extern double bessj( int, double );
+//extern double bessy( int, double );
+//extern double bessi( int, double );
+//extern double bessk( int, double );
 
-void ComputerSVChannelsFeature(IplImage *orig_bw,vector<double>& featurevector){
+void ComputeSVChannelsFeature(IplImage *orig_bw,vector<double>& featurevector){
 
     int scalenum = 2;
     for (int itr_scale = 1; itr_scale<=scalenum; itr_scale++)
@@ -79,7 +88,29 @@ void ComputerSVChannelsFeature(IplImage *orig_bw,vector<double>& featurevector){
 		cvReleaseImage(&imdist_scaled);
 	}
 }
-void computerHueFeature(IplImage *orig_h,vector<double>& featurevector){
+double computerHueHistEntropy(vector<double>& hueHist){
+    double sum_hue = accumulate(hueHist.begin(),hueHist.end(),0.0);
+    double hue_entropy = 0.0;
+    for(int i=0; i<hueHist.size();i++){
+        double single_hue_prob = hueHist[i]/sum_hue;
+        if (single_hue_prob > 1e-6)
+            hue_entropy+=log(single_hue_prob)*single_hue_prob;
+    }
+    return -hue_entropy;
+}
+
+double computerDominantColorPercent(double areaHist,vector<double>& hueHist){
+    double r_hue = sqrt(areaHist/2/M_PI);
+    double sum_hue = accumulate(hueHist.begin(),hueHist.end(),0.0);
+    double over_r_hue = 0;
+    for(int i=0;i<hueHist.size();i++){
+        if(hueHist[i]>=r_hue)
+            over_r_hue+=hueHist[i];
+    }
+    return over_r_hue/sum_hue;
+}
+
+void computeHueFeature(IplImage *orig_h,vector<double>& featurevector){
     int hMax = 180;
     //int svMax = 256;
     cv::Mat im_mat=cv::Mat(orig_h);
@@ -89,7 +120,20 @@ void computerHueFeature(IplImage *orig_h,vector<double>& featurevector){
     //float svRanges[] = { 0, (float)svMax  };
     //const float* svRange = { svRanges  };
     cv::calcHist(&im_mat, 1, 0, cv::Mat(), hHist, 1, &hMax, &hRange);
-    cout<<"rows: "<<hHist.rows<<" cols: "<<hHist.cols<<endl;
+    vector<double> vert_hueHist;
+    for(int i=0; i < hHist.rows ; i++){
+        for(int j=0; j < hHist.cols; j++){
+            vert_hueHist.push_back(hHist.at<double>(i,j));
+        }
+    }
+    cout<<"rows: "<<hHist.rows<<" cols: "<<hHist.cols<<" vector len : "<<vert_hueHist.size()<<endl;
+    for(int i=0;i<vert_hueHist.size();i++){
+         //cout<<vert_hueHist[i]<<" ";
+         //cout<<bessj(1,vert_hueHist[i])<<endl;
+         cout<<bessj(1,i)<<" ";
+    }
+    cout<<endl;
+    cout<<"Hue_entropy : "<<computerHueHistEntropy(vert_hueHist)<<endl;
 }
 //function definitions
 void ComputeBrisqueFeature(IplImage *orig, vector<double>& featurevector)
@@ -103,17 +147,17 @@ void ComputeBrisqueFeature(IplImage *orig, vector<double>& featurevector)
 
     IplImage *orig_bw_v = cvCreateImage(cvGetSize(orig_bw_int), IPL_DEPTH_64F, 1);
     cvConvertScale(orig_v, orig_bw_v, 1.0/255);
-    ComputerSVChannelsFeature(orig_bw_v,featurevector);
+    ComputeSVChannelsFeature(orig_bw_v,featurevector);
     cvReleaseImage(&orig_bw_v);
 
     IplImage *orig_bw_s = cvCreateImage(cvGetSize(orig_bw_int), IPL_DEPTH_64F, 1);
     cvConvertScale(orig_s, orig_bw_s, 1.0/255);
-    ComputerSVChannelsFeature(orig_bw_s,featurevector);
+    ComputeSVChannelsFeature(orig_bw_s,featurevector);
     cvReleaseImage(&orig_bw_s);
 
     IplImage *orig_bw_h = cvCreateImage(cvGetSize(orig_bw_int), IPL_DEPTH_64F, 1);
     cvConvertScale(orig_h, orig_bw_h, 1.0/255);
-    computerHueFeature(orig_h,featurevector);
+    computeHueFeature(orig_h,featurevector);
     cvReleaseImage(&orig_bw_h);
 
 
