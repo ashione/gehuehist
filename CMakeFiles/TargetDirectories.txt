@@ -1,0 +1,1 @@
+/home/tj/IQA/brisque/CMakeFiles/brisquequality.dir
