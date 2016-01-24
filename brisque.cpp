@@ -104,14 +104,25 @@ typedef pair<double,int> histIndex;
 bool compare(histIndex& a,histIndex& b ){
     return a.first>b.first;
 }
-double computerDominantColorPercent(double areaHist,vector<double>& hueHist,double& r_hue,vector<double>& featurevector,int k=5){
-    r_hue = sqrt(areaHist/2/M_PI);
+
+void computerDominantColorPercent(
+        double areaHist,
+        vector<double>& hueHist,
+        double& r_hue,
+        double& r_angle,
+        vector<double>& featurevector,
+        int k=5){
+    //r_hue = sqrt(areaHist/2/M_PI);
     double sum_hue = accumulate(hueHist.begin(),hueHist.end(),0.0);
-    double over_r_hue = 0;
+    double over_r_hue = 0.0;
+    double over_r_percent = 0.0;
+    const double r_x = r_hue*sin(r_angle);
+    const double r_y = r_hue*cos(r_angle);
     vector<histIndex> histBondIndex;
     for(int i=0;i<hueHist.size();i++){
         if(hueHist[i]>=r_hue){
             over_r_hue+=hueHist[i];
+            over_r_percent+=1.0;
             histBondIndex.push_back(histpair(hueHist[i],i));
         }
     }
@@ -119,10 +130,18 @@ double computerDominantColorPercent(double areaHist,vector<double>& hueHist,doub
     //cout<<"r_hue: "<<r_hue<<endl;
     for(int i=0;i<k;i++){
     //    //cout<<histBondIndex[i].first<<" ";
-        featurevector.push_back((double)histBondIndex[i].second/hueHist.size());
+        double r_main_angle = (double)histBondIndex[i].second/hueHist.size();
+        double r_main_hue = histBondIndex[i].first*sin(r_main_angle);
+        double r_main_x = r_main_hue*sin(r_main_angle);
+        double r_main_y = r_main_hue*cos(r_main_angle);
+        double distance = sqrt(pow(r_main_x-r_x,2)+pow(r_main_y-r_y,2));
+        //featurevector.push_back((double)histBondIndex[i].second/hueHist.size());
+        featurevector.push_back(distance);
     }
     //cout<<endl;
-    return over_r_hue/sum_hue;
+    //return over_r_hue/sum_hue;
+    featurevector.push_back(over_r_hue/sum_hue);
+    featurevector.push_back(over_r_percent/hueHist.size());
 }
 
 void computeHueFeature(IplImage *orig_h,vector<double>& featurevector){
@@ -175,14 +194,14 @@ void computeHueFeature(IplImage *orig_h,vector<double>& featurevector){
             //cout<<"("<<i<<") :"<<vert_hueHist[i]<<" ";
         }
         //cout<<endl;
-        double hue_sum = std::accumulate(vert_hueHist.begin(),vert_hueHist.end(),0);
+        double hue_sum = std::accumulate(vert_hueHist.begin(),vert_hueHist.end(),20);
         double hue_sigma = 0;
         double hue_mu = hue_sum/vert_hueHist.size();
         for(int i=0;i<vert_hueHist.size();i++){
             hue_sigma+=pow(vert_hueHist[i]-hue_mu,2.0);
         }
         hue_sigma=sqrt(hue_sigma)/vert_hueHist.size();
-        //featurevector.push_back(hue_sigma);
+        featurevector.push_back(hue_sigma);
        // featurevector.push_back(hue_max_angle);
        // featurevector.push_back(hue_min_angle);
         //cout<<endl;
@@ -193,8 +212,8 @@ void computeHueFeature(IplImage *orig_h,vector<double>& featurevector){
         double areaHist = featurevector.back();
         //cout<<"areaHist : "<<areaHist<<endl;
         featurevector.pop_back();
-        double r_hue;
-        double dominat_color_percent = computerDominantColorPercent(areaHist,vert_hueHist,r_hue,featurevector,0);
+        double r_hue = featurevector[featurevector.size()-2],r_angle=featurevector.back();
+        computerDominantColorPercent(areaHist,vert_hueHist,r_hue,r_angle,featurevector,0);
         //cout<<"r_hue : "<<r_hue<<" hue_mu : "<<hue_mu<<endl;
        // featurevector.push_back(r_hue);
         //featurevector.push_back(dominat_color_percent);
@@ -218,10 +237,10 @@ void ComputeBrisqueFeature(IplImage *orig, vector<double>& featurevector)
     ComputeSVChannelsFeature(orig_bw_v,featurevector);
     cvReleaseImage(&orig_bw_v);
 
-    IplImage *orig_bw_s = cvCreateImage(cvGetSize(orig_bw_int), IPL_DEPTH_64F, 1);
-    cvConvertScale(orig_s, orig_bw_s, 1.0/255);
-    ComputeSVChannelsFeature(orig_bw_s,featurevector);
-    cvReleaseImage(&orig_bw_s);
+    //IplImage *orig_bw_s = cvCreateImage(cvGetSize(orig_bw_int), IPL_DEPTH_64F, 1);
+    //cvConvertScale(orig_s, orig_bw_s, 1.0/255);
+    //ComputeSVChannelsFeature(orig_bw_s,featurevector);
+    //cvReleaseImage(&orig_bw_s);
 
     //IplImage *orig_bw_h = cvCreateImage(cvGetSize(orig_bw_int), IPL_DEPTH_64F, 1);
     //cvConvertScale(orig_h, orig_bw_h, 1.0/255);
