@@ -9,8 +9,9 @@
 #include <cxcore.h>
 #include <highgui.h>
 #include <vector>
-#include <string.h>
-#include "bessel.h"
+#include <cstring>
+#include <string>
+//#include "bessel.h"
 using namespace std;
 #define M_PI 3.14159265358979323846
 
@@ -53,6 +54,8 @@ typedef Image<double> BwImage;
 void AGGDfit(IplImage* structdis, double& lsigma_best, double& rsigma_best, double& gamma_best);
 void ComputeBrisqueFeature(IplImage *orig, vector<double>& featurevector);
 void trainModel();
+void trainModel_scis();
+void testModel();
 float computescore(string prefix, char* imname);
 
 template <typename Type>
@@ -76,5 +79,6 @@ void printVectortoFile(char*filename , vector<Type> vec,float score)
   fclose(fid);
 }
 
+//template <typename S,template T>
 
 #endif

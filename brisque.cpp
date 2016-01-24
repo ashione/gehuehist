@@ -3,6 +3,7 @@
 //{
 #include "bessel.h"
 #include <numeric>
+#include "gravity/gravity.h"
 //}
 //extern double bessj( int, double );
 //extern double bessy( int, double );
@@ -98,65 +99,117 @@ double computerHueHistEntropy(vector<double>& hueHist){
     }
     return -hue_entropy;
 }
-
-double computerDominantColorPercent(double areaHist,vector<double>& hueHist,double& r_hue){
+typedef pair<double,int> histIndex;
+#define histpair(A,B) make_pair<double,int>(A,B)
+bool compare(histIndex& a,histIndex& b ){
+    return a.first>b.first;
+}
+double computerDominantColorPercent(double areaHist,vector<double>& hueHist,double& r_hue,vector<double>& featurevector,int k=5){
     r_hue = sqrt(areaHist/2/M_PI);
     double sum_hue = accumulate(hueHist.begin(),hueHist.end(),0.0);
     double over_r_hue = 0;
+    vector<histIndex> histBondIndex;
     for(int i=0;i<hueHist.size();i++){
-        if(hueHist[i]>=r_hue)
+        if(hueHist[i]>=r_hue){
             over_r_hue+=hueHist[i];
+            histBondIndex.push_back(histpair(hueHist[i],i));
+        }
     }
+    sort(histBondIndex.begin(),histBondIndex.end(),compare);
+    //cout<<"r_hue: "<<r_hue<<endl;
+    for(int i=0;i<k;i++){
+    //    //cout<<histBondIndex[i].first<<" ";
+        featurevector.push_back((double)histBondIndex[i].second/hueHist.size());
+    }
+    //cout<<endl;
     return over_r_hue/sum_hue;
 }
 
 void computeHueFeature(IplImage *orig_h,vector<double>& featurevector){
-    int scalenum = 2;
-    for (int itr_scale = 1; itr_scale<=scalenum; itr_scale++)
-	{
-        cout<<orig_h->width<<" "<<orig_h->height<<endl;
-		IplImage *imdist_scaled =
-            cvCreateImage(cvSize(orig_h->width/pow((double)2,itr_scale-1),
-                        orig_h->height/pow((double)2,itr_scale-1)),
-                        IPL_DEPTH_8U, 1);
-		cvResize(orig_h, imdist_scaled,CV_INTER_CUBIC);
+    //int scalenum = 1;
+    //for (int itr_scale = 1; itr_scale<=scalenum; itr_scale++)
+	//{
+	//	IplImage *imdist_scaled =
+    //        cvCreateImage(cvSize(orig_h->width/pow((double)2,itr_scale-1),
+    //                    orig_h->height/pow((double)2,itr_scale-1)),
+    //                    IPL_DEPTH_8U, 1);
+	//	cvResize(orig_h, imdist_scaled,CV_INTER_CUBIC);
         int hMax = 180;
         //int svMax = 256;
         //cv::Mat im_mat(imdist_scaled->width,imdist_scaled->height,,cv::Mat(imdist_scaled));
-        cv::Mat im_mat= cv::Mat(imdist_scaled);
-        cv::Mat hHist;
+     //   cv::Mat im_mat= cv::Mat(imdist_scaled);
+        cv::Mat im_mat= cv::Mat(orig_h);
+        cv::MatND hHist;
         float hRanges[] = { 0, (float)hMax  };
         const float* hRange = { hRanges  };
+        //for(int i=0;i<im_mat.rows;i++){
+        //    for(int j=0;j<im_mat.cols;j++){
+        //        cout<<(int)im_mat.at<uint8_t>(i,j)<<" ";
+        //    }
+        //    cout<<endl;
+        //}
         //float svRanges[] = { 0, (float)svMax  };
         //const float* svRange = { svRanges  };
-        cv::calcHist(&im_mat, 1, 0, cv::Mat(), hHist, 1, &hMax, &hRange);
+        cv::calcHist(&im_mat, 1, 0, cv::Mat(), hHist, 1, &hMax, &hRange,true,false);
         vector<double> vert_hueHist;
+        double hue_max_value = 0.0;
         for(int i=0; i < hHist.rows ; i++){
             for(int j=0; j < hHist.cols; j++){
-                vert_hueHist.push_back(hHist.at<double>(i,j));
+                vert_hueHist.push_back(hHist.at<float>(i,j));
+                if(hue_max_value<vert_hueHist.back())
+                    hue_max_value = vert_hueHist.back();
+                //cout<<hHist.at<float>(i,j)<<" ";
             }
         }
-        cout<<"rows: "<<hHist.rows<<" cols: "<<hHist.cols<<" vector len : "<<vert_hueHist.size()<<endl;
+        //cout<<"hue_sum : "<<hue_sum<<" picture : " <<im_mat.rows*im_mat.cols<<endl;
+        //cout<<endl;
+        //vector<double>::iterator hue_max = std::max_element(vert_hueHist.begin(),vert_hueHist.end());
+        //vector<double>::iterator hue_min = std::min_element(vert_hueHist.begin(),vert_hueHist.end());
+        ////cout<<"rows: "<<hHist.rows<<" cols: "<<hHist.cols<<" vector len : "<<vert_hueHist.size()<<endl;
+        //double hue_max_angle = ((double)(hue_max-vert_hueHist.begin()))/vert_hueHist.size();
+        //double hue_min_angle = ((double)(hue_min-vert_hueHist.begin()))/vert_hueHist.size();
+        //cout<<"hue_max : "<<*hue_max<<endl;
         for(int i=0;i<vert_hueHist.size();i++){
-             //cout<<vert_hueHist[i]<<" ";
-             //cout<<bessj(1,vert_hueHist[i])<<endl;
-             cout<<bessj(1,i)<<" ";
+            //vert_hueHist[i] = vert_hueHist[i]/(*hue_max);
+            vert_hueHist[i] = vert_hueHist[i]/(hue_max_value);
+            //cout<<"("<<i<<") :"<<vert_hueHist[i]<<" ";
         }
-        cout<<endl;
+        //cout<<endl;
+        double hue_sum = std::accumulate(vert_hueHist.begin(),vert_hueHist.end(),0);
+        double hue_sigma = 0;
+        double hue_mu = hue_sum/vert_hueHist.size();
+        for(int i=0;i<vert_hueHist.size();i++){
+            hue_sigma+=pow(vert_hueHist[i]-hue_mu,2.0);
+        }
+        hue_sigma=sqrt(hue_sigma)/vert_hueHist.size();
+        //featurevector.push_back(hue_sigma);
+       // featurevector.push_back(hue_max_angle);
+       // featurevector.push_back(hue_min_angle);
+        //cout<<endl;
         double hue_entropy = computerHueHistEntropy(vert_hueHist);
         featurevector.push_back(hue_entropy);
-        cout<<"Hue_entropy : "<<hue_entropy<<endl;
 
-        cvReleaseImage(&imdist_scaled);
-    }
+        gravity(vert_hueHist,featurevector);
+        double areaHist = featurevector.back();
+        //cout<<"areaHist : "<<areaHist<<endl;
+        featurevector.pop_back();
+        double r_hue;
+        double dominat_color_percent = computerDominantColorPercent(areaHist,vert_hueHist,r_hue,featurevector,0);
+        //cout<<"r_hue : "<<r_hue<<" hue_mu : "<<hue_mu<<endl;
+       // featurevector.push_back(r_hue);
+        //featurevector.push_back(dominat_color_percent);
+        //cout<<"Hue_entropy : "<<hue_entropy<<endl;
+
+        //cvReleaseImage(&imdist_scaled);
+    //}
 }
 //function definitions
 void ComputeBrisqueFeature(IplImage *orig, vector<double>& featurevector)
 {
     IplImage *orig_bw_int = cvCreateImage(cvGetSize(orig), orig->depth, 3);
-    IplImage *orig_h = cvCreateImage(cvGetSize(orig), orig->depth, 1);
-    IplImage *orig_s = cvCreateImage(cvGetSize(orig), orig->depth, 1);
-    IplImage *orig_v = cvCreateImage(cvGetSize(orig), orig->depth, 1);
+    IplImage *orig_h = cvCreateImage(cvGetSize(orig), IPL_DEPTH_8U,1);
+    IplImage *orig_s = cvCreateImage(cvGetSize(orig), IPL_DEPTH_8U,1);
+    IplImage *orig_v = cvCreateImage(cvGetSize(orig), IPL_DEPTH_8U, 1);
     cvCvtColor(orig, orig_bw_int, CV_RGB2HSV);
     cvSplit(orig_bw_int,orig_h,orig_s,orig_v,NULL);
 
@@ -173,6 +226,7 @@ void ComputeBrisqueFeature(IplImage *orig, vector<double>& featurevector)
     //IplImage *orig_bw_h = cvCreateImage(cvGetSize(orig_bw_int), IPL_DEPTH_64F, 1);
     //cvConvertScale(orig_h, orig_bw_h, 1.0/255);
     computeHueFeature(orig_h,featurevector);
+    //computeHueFeature(orig_bw_int,featurevector);
     //cvReleaseImage(&orig_bw_h);
 
 

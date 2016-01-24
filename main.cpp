@@ -34,17 +34,17 @@ int read_range_file(string prefix) {
 	string range_fname = prefix + "allrange";
 	FILE* range_file = fopen(range_fname.c_str(), "r");
 	if(range_file == NULL) return 1;
-	//assume standard file format for this program	
+	//assume standard file format for this program
 	fgets(buff, 100, range_file);
 	fgets(buff, 100, range_file);
 	//now we can fill the array
 	for(i = 0; i < 36; ++i) {
-		float a, b, c; 
+		float a, b, c;
 	    fscanf(range_file, "%f %f %f", &a, &b, &c);
 		rescale_vector[i][0] = b;
 		rescale_vector[i][1] = c;
 	}
-	return 0;	
+	return 0;
 }
 
 
@@ -66,8 +66,8 @@ int  main(int argc, char** argv)
 		cerr<<"unable to open allrange file"<<endl;
 		return -1;
     }
-   
-  
+
+
   int istrain    = read_int( argc, argv, "-t",1 );
   char *filename = read_string( argc, argv, "-im", NULL );
 
@@ -75,7 +75,8 @@ int  main(int argc, char** argv)
 
   if(!istrain) //default value is 1 for false?
    trainModel();
-  
+
   qualityscore = computescore(prefix, filename);
-  cout<<"score in main file is given by:"<<qualityscore<<endl;
+  //cout<<"score in main file is given by:"<<qualityscore<<endl;
+  cout<<qualityscore<<endl;
 }

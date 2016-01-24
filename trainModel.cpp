@@ -7,8 +7,18 @@
 #define GBLURNUM   174
 #define FFNUM      174
 
+void printImageVectortoFile( char*filename , vector<string> vec, vector<float> score)
+{
+  FILE* fid = fopen(filename,"a");
+  //cout<<"file opened"<<endl;
+  //fprintf(fid,"%f ",score);
+  for(int itr_param = 0; itr_param < vec.size();itr_param++)
+    fprintf(fid,"%s %f\n",vec[itr_param].c_str(),score[itr_param]);
+  //fprintf(fid,"\n");
+  fclose(fid);
+}
 
-void trainModel(){
+void trainModel_scis(){
 
     cout<<"retraining...SCIs"<<endl;
 
@@ -65,13 +75,13 @@ void trainModel(){
 
 }
 
-void trainModel_live(){
+void trainModel(){
 
     cout<<"retraining..."<<endl;
 
      FILE* fid;
-    //char* foldername = "databaserelease2";
-    char* foldername = "/home/tj/IQA_CNN/LIVE";
+    char* foldername = "/Users/ashione/Desktop/databaserelease2";
+    //char* foldername = "/home/tj/IQA_CNN/LIVE";
     //----------------------------------------------------
     // class is the distortion category, there are 982 images in LIVE database
     vector<string> distortionlabels;
@@ -102,9 +112,11 @@ void trainModel_live(){
     fscanf(fid,"%f",dmosscores+itr);
     fclose(fid);
 
-    char* filename = "train.txt";
+    char* filename = "live_train.txt";
     fid = fopen(filename,"w");
     fclose(fid);
+    vector<string> imname_vert;
+    vector<float> imscore_vert;
     for(int itr = 0; itr < IMAGENUM; itr++)
     {
       // cout<<itr<<":"<<iforg[itr]<<endl;
@@ -122,7 +134,8 @@ void trainModel_live(){
       imname.append(static_cast<ostringstream*>( &(ostringstream() <<(itr-imnumber[categorylabels[itr]]+1)))->str());
       imname.append(".bmp");
       cout<<imname<<"\n";
-
+      imname_vert.push_back(imname);
+      imscore_vert.push_back(score);
       IplImage* orig = cvLoadImage(imname.c_str());
       vector<double> brisqueFeatures;
       ComputeBrisqueFeature(orig, brisqueFeatures);
@@ -130,14 +143,22 @@ void trainModel_live(){
       printVectortoFile(filename,brisqueFeatures,score);
 
     }
+    char* test_filename = "live_test.txt";
+    fid = fopen(test_filename,"w");
+    fclose(fid);
+    printImageVectortoFile(test_filename,imname_vert,imscore_vert);
 
-   system("libsvm/svm-scale -l -1 -u 1 -s allrange train.txt > train_scale");
+   system("libsvm/svm-scale -l -1 -u 1 -s allrange live_train.txt > train_scale");
    system("libsvm/svm-train  -s 3 -g 0.05 -c 1024 -b 1 -q train_scale allmodel");
 
-   remove("train.txt");
-   remove("train_scale");
+   //remove("train.txt");
+   //remove("train_scale");
 
 //    return 0;
+
+}
+
+void testModel(){
 
 }
 
