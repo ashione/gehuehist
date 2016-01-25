@@ -101,9 +101,15 @@ double computerHueHistEntropy(vector<double>& hueHist){
 }
 typedef pair<double,int> histIndex;
 #define histpair(A,B) make_pair<double,int>(A,B)
+#if __APPLE__
 bool compare(histIndex& a,histIndex& b ){
     return a.first>b.first;
 }
+#elif __linux__
+bool compare(histIndex a,histIndex b ){
+    return a.first>b.first;
+}
+#endif
 
 void computerDominantColorPercent(
         double areaHist,
